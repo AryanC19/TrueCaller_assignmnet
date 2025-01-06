@@ -51,7 +51,7 @@ fun InfoDisplayScreen(
                 .padding(top = 16.dp),
             horizontalArrangement = Arrangement.Start
         ) {
-            IconButton(onClick = { navController.popBackStack()  }) {
+            IconButton(onClick = { navController.navigateUp()  }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -99,8 +99,6 @@ fun InfoDisplayScreen(
             )
             Button(
                 onClick = {
-                    // Perform your success action here (e.g., navigate back or show a success message)
-
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,8 +119,10 @@ fun InfoDisplayScreen(
 @Preview
 fun PreviewInfoDisplayScreen() {
     // Provide sample data for preview
+    val navController = rememberNavController()
+
     InfoDisplayScreen(
         firstName = "John", lastName = "Doe", mobileNumber = "1234567890",
-        navController = TODO()
+        navController = navController
     )
 }

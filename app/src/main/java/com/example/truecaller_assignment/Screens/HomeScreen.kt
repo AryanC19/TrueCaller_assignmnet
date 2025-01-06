@@ -102,6 +102,7 @@ fun HomeScreen(navController: NavController,
                     is RegistrationState.Success -> {
                         LaunchedEffect(Unit) {
                             onNavigateToProfile()
+                            viewModel.resetUiState()
                         }
                     }
                     else -> {}

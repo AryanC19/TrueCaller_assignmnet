@@ -140,7 +140,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
+    fun resetUiState() {
+        _uiState.value = RegistrationState.Initial
+    }
     // Call this method first before any other SDK operations
     fun initializeTruecaller(activity: FragmentActivity) {
         try {
