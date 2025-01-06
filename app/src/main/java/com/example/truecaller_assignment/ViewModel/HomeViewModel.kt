@@ -31,7 +31,7 @@ import retrofit2.http.Header
 // API Interface for token exchange
 interface TruecallerApi {
     @FormUrlEncoded
-    @POST("oauth2/token")
+    @POST("token")
     suspend fun getAccessToken(
         @Field("code") code: String,
         @Field("grant_type") grantType: String = "authorization_code",
@@ -39,7 +39,7 @@ interface TruecallerApi {
         @Field("client_id") clientId: String
     ): TokenResponse
 
-    @GET("profile")
+    @GET("userinfo")
     suspend fun getUserProfile(
         @Header("Authorization") authToken: String
     ): TruecallerProfile
@@ -50,11 +50,26 @@ data class TokenResponse(
     val token_type: String,
     val expires_in: Int
 )
-// Add these data classes for API responses
+
+// The user profile JSON includes "given_name", "family_name", "phone_number", etc.
 data class TruecallerProfile(
-    val name: Name,
-    val phoneNumbers: List<PhoneNumber>
+    val sub: String?,
+    val given_name: String?,
+    val family_name: String?,
+    val phone_number: String?,
+    val email: String?,
+    val picture: String?,
+    val gender: String?,
+    val phone_number_country_code: String?,
+    val phone_number_verified: Boolean?,
+    val address: Address?
 )
+
+data class Address(
+    val locality: String?,
+    val postal_code: String?
+)
+
 
 data class Name(
     val first: String,
@@ -80,10 +95,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val userData = _userData.asStateFlow()
 
     private val api = Retrofit.Builder()
-        .baseUrl("https://api.truecaller.com/v2/")
+        .baseUrl("https://oauth-account-noneu.truecaller.com/v1/")
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(TruecallerApi::class.java)
+
+
+
 
     private val tcOAuthCallback = object : TcOAuthCallback {
         override fun onSuccess(tcOAuthData: TcOAuthData) {
@@ -95,15 +113,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                             codeVerifier = codeVerifier ?: "",
                             clientId = getApplication<Application>().getString(R.string.clientID)
                         )
-
                         val profile = api.getUserProfile("Bearer ${tokenResponse.access_token}")
 
+                        // Map retrieved data to your own UserData
                         _userData.value = UserData(
-                            firstName = profile.name.first,
-                            lastName = profile.name.last,
-                            phoneNumber = profile.phoneNumbers.firstOrNull()?.let {
-                                "${it.countryCode}${it.number}"
-                            } ?: ""
+                            firstName = profile.given_name ?: "",
+                            lastName = profile.family_name ?: "",
+                            phoneNumber = profile.phone_number ?: ""
                         )
                         _uiState.value = RegistrationState.Success
                     } catch (e: Exception) {
@@ -124,6 +140,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     // Call this method first before any other SDK operations
     fun initializeTruecaller(activity: FragmentActivity) {
         try {
@@ -139,20 +156,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 .footerType(TcSdkOptions.FOOTER_TYPE_SKIP)
                 .sdkOptions(TcSdkOptions.OPTION_VERIFY_ONLY_TC_USERS)
                 .build()
-
             TcSdk.init(tcSdkOptions)
+
         } catch (e: Exception) {
             throw RuntimeException("Failed to initialize Truecaller SDK: ${e.message}")
         }
     }
-
     fun initiateRegistration(activity: FragmentActivity) {
         try {
-            if (!truecallerSdk.isOAuthFlowUsable) {
+            // Check OAuth flow
+            if (!TcSdk.getInstance().isOAuthFlowUsable) {
                 _uiState.value = RegistrationState.Error("Truecaller is not available")
                 return
             }
 
+
+            // Check OAuth flow
+            if (!TcSdk.getInstance().isOAuthFlowUsable()) {  // Fixed: using correct method name with parentheses
+                _uiState.value = RegistrationState.Error("Truecaller is not available")
+                return
+            }
+
+            // Continue with OAuth flow
             currentState = BigInteger(130, SecureRandom()).toString(32)
             truecallerSdk.setOAuthState(currentState)
 
